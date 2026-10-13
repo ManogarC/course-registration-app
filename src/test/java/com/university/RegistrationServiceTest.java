@@ -150,4 +150,90 @@ class RegistrationServiceTest {
         assertFalse(result);
         assertFalse(student.isRegistered("CS301"));
     }
+
+       @Test
+    void registerShouldRejectStudentWhenCourseIsFull() {
+
+        Student student = new Student("S101", "Alice");
+
+        Course course = new Course(
+                "CS101",
+                "Java Programming",
+                3,
+                2,
+                true,
+                null
+        );
+
+        RegistrationService service = new RegistrationService();
+
+        // Fill the course to its capacity of 2
+        course.incrementEnrollment();
+        course.incrementEnrollment();
+
+        int enrollmentBefore = course.getCurrentEnrollment();
+        int creditsBefore = student.getTotalCredits();
+
+        boolean result = service.register(student, course);
+
+        assertFalse(result,
+                "Registration should fail when the course is full");
+
+        assertEquals(enrollmentBefore, course.getCurrentEnrollment(),
+                "Enrollment count should remain unchanged");
+
+        assertFalse(student.isRegistered("CS101"),
+                "Student should not be registered");
+
+        assertEquals(creditsBefore, student.getTotalCredits(),
+                "Student's total credits should remain unchanged");
+
+        assertTrue(student.getRegisteredCourses().isEmpty(),
+                "Student's registered course list should remain empty");
+    }
+
+    @Test
+    void registerShouldAcceptStudentWhenExactlyOneSeatRemains() {
+
+        Student student = new Student("S102", "Bob");
+
+        Course course = new Course(
+                "CS102",
+                "Database Systems",
+                4,
+                2,
+                true,
+                null
+        );
+
+        RegistrationService service = new RegistrationService();
+        // One student is already enrolled; one seat remains
+        course.incrementEnrollment();
+
+        int enrollmentBefore = course.getCurrentEnrollment();
+        int creditsBefore = student.getTotalCredits();
+
+        boolean result = service.register(student, course);
+
+        assertTrue(result,
+                "Registration should succeed when one seat remains");
+
+        assertEquals(enrollmentBefore + 1,
+                course.getCurrentEnrollment(),
+                "Enrollment count should increase by one");
+
+        assertTrue(student.isRegistered("CS102"),
+                "Student should be registered for the course");
+
+        assertTrue(student.getRegisteredCourses().contains("CS102"),
+                "Registered course should appear in the student's course list");
+
+        assertEquals(creditsBefore + 4, student.getTotalCredits(),
+                "Student's credits should increase by the course credits");
+
+        assertEquals(2, course.getCurrentEnrollment(),
+                "Course should reach capacity after registration");
+    }
+
+   
 }
