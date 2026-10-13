@@ -235,5 +235,119 @@ class RegistrationServiceTest {
                 "Course should reach capacity after registration");
     }
 
-   
+        
+        @Test
+        void successfulRegistrationShouldCreateAuditEntry() {
+
+        Student student = new Student("S201", "Charlie");
+
+        Course course = new Course(
+                "CS201",
+                "Operating Systems",
+                4,
+                30,
+                true,
+                null
+        );
+
+
+        RegistrationService service = new RegistrationService();
+
+        boolean result = service.register(student, course);
+
+        assertTrue(result);
+
+        assertEquals(1, service.getAuditLog().size());
+
+        String entry = service.getAuditLog().get(0);
+
+        assertTrue(entry.contains("studentId=S201"));
+        assertTrue(entry.contains("studentName=Charlie"));
+        assertTrue(entry.contains("courseCode=CS201"));
+        assertTrue(entry.contains("courseName=Operating Systems"));
+        }
+
+        @Test
+        void rejectedRegistrationShouldNotCreateAuditEntry() {
+
+        Student student = new Student("S202", "David");
+
+        Course course = new Course(
+                "CS202",
+                "Computer Networks",
+                3,
+                1,
+                true,
+                null
+        );
+
+        // Fill the course before attempting registration
+        course.incrementEnrollment();
+
+        RegistrationService service = new RegistrationService();
+
+        boolean result = service.register(student, course);
+
+        assertFalse(result);
+
+        assertTrue(service.getAuditLog().isEmpty());
+
+        assertFalse(student.isRegistered("CS202"));
+        assertEquals(0, student.getTotalCredits());
+        assertEquals(1, course.getCurrentEnrollment());
+        }
+
+        @Test
+        void failedRegistrationShouldNotErasePreviousAuditEntry() {
+
+        Student firstStudent = new Student("S203", "Emma");
+
+        Course firstCourse = new Course(
+                "CS203",
+                "Software Engineering",
+                3,
+                10,
+                true,
+                null
+        );
+
+        RegistrationService service = new RegistrationService();
+        
+        boolean firstResult =
+                service.register(firstStudent, firstCourse);
+
+        assertTrue(firstResult);
+        assertEquals(1, service.getAuditLog().size());
+
+        String originalEntry = service.getAuditLog().get(0);
+
+        Student secondStudent = new Student("S204", "Frank");
+
+        Course fullCourse = new Course(
+                "CS204",
+                "Computer Architecture",
+                4,
+                1,
+                true,
+                null
+        );
+
+        fullCourse.incrementEnrollment();
+
+        boolean secondResult =
+                service.register(secondStudent, fullCourse);
+
+        assertFalse(secondResult);
+
+        assertEquals(1, service.getAuditLog().size());
+
+        assertEquals(
+                originalEntry,
+                service.getAuditLog().get(0)
+        );
+
+        assertFalse(secondStudent.isRegistered("CS204"));
+        assertEquals(0, secondStudent.getTotalCredits());
+        }
+
 }
